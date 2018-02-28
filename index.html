@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="fr">
+
+<head>
+    <meta charset="utf-8">
+    <title>Titre de la page</title>
+    <script src="http://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+
+    <script src="json.js"></script>
+    <style>
+        #content {
+            width: 50%;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+        
+        .square {
+            float: left;
+            box-sizing: border-box;
+            -moz-box-sizing: border-box;
+            -webkit-box-sizing: border-box;
+        }
+        
+        .alive {
+            background-color: black;
+            border: 1px solid #FFFFFF;
+        }
+        
+        .dead {
+            background-color: white;
+            border: 1px solid black;
+        }
+        
+        div#controls {
+            margin-top: 13px;
+            margin-left: 85px;
+        }
+    </style>
+
+</head>
+
+<body>
+    <h1>Le jeu de la vie by Raphael</h1>
+    <p>La taille maximale est de 100 cellules</p>
+    <div id="size">
+        <label>largeur : 
+        <input type="number" maxlength="100" value="100" id="largeur"/></label><br>
+        <label>hauteur : 
+            <input type="number" maxlength="100" value="100" id="hauteur"/></label><br>
+
+        <label>vitesse : 
+                <input type="number" value="10" id="vitesse"/></label><br>
+
+        <div id="controls">
+            <input type="submit" value="Jouer" id="play" />
+
+            <input type="submit" value="Pause" id="stop" />
+
+            <input type="submit" value="Réinitialiser" id="reset" />
+
+            <input type="submit" value="Sauver le pattern" id="save" />
+
+
+            <select id="listing">
+              <option>Charger une sauvegarde </option>
+
+            </select>
+        </div>
+        <div>
+            <p>Générations : <span id="generation"></span></p>
+
+        </div>
+
+    </div>
+    <div id="content">
+
+
+    </div>
+    <script type="text/javascript">
+        var fileExt = ".xml";
+
+        $(document).ready(function() {
+
+            $.ajax({
+                //This will retrieve the contents of the folder if the folder is configured as 'browsable'
+                url: 'xml/',
+                success: function(data) {
+                    console.log(data);
+
+                    //List all xml file names in the page
+
+                    //var filename = this.href.replace(window.location, "").replace("http:///", "");
+                    //$("#listing").append( '<li>'+filename+'</li>');
+
+                    $(data).find("a:contains(" + fileExt + ")").each(function() {
+                        $("#listing").append('<option value="' + $(this).text() + '">' + $(this).text() + '</option>');
+                    });
+
+                }
+            });
+
+        });
+
+
+
+        var state = "stop";
+        var isPlay = false;
+        var test = true;
+        var interval;
+        var vitesse = 10;
+        var current = [];
+        var generation = 0;
+        var largeurcont = $("#content").width();
+        for (i = 0; i < 100; i++) {
+            current[i] = [];
+            for (j = 0; j < 100; j++) {
+                $("#content").append("<div class='square dead'></div>");
+                current[i][j] = false;
+            }
+
+        }
+        // alert("width : " + largeurcontent + "/largeur : " + largeur);
+        $(".square").css({
+            'width': (largeurcont / 100),
+            'height': largeurcont / 100
+        })
+        $("#content").css("width", largeurcont)
+
+        $("#largeur,#hauteur").change(function() {
+            reset();
+
+        });
+        $("body").on("click", ".square", function() {
+            if ($(this).hasClass("dead")) {
+                $(this).addClass("alive");
+                $(this).removeClass("dead");
+            } else {
+                $(this).addClass("dead");
+                $(this).removeClass("alive");
+            }
+
+        });
+        $("#stop").click(function() {
+            stop();
+        });
+        $("#play").click(function() {
+            playing();
+        });
+
+        $("#reset").click(function() {
+            reset();
+        });
+
+        $("#save").click(function() {
+            xml(current);
+        });
+
+        $("#listing").click(function() {
+            load();
+        });
+
+        $("#vitesse").change(function() {
+            vitesse = $("#vitesse").val();
+        });
+
+        function stop() {
+            if (state == "play") {
+                clearInterval(interval);
+                test = true;
+
+                state = "stop";
+            }
+
+        }
+
+        function xml(array) {
+            var compte = 0;
+            var ligne;
+            var colonne;
+            var largeur = $("#largeur").val();
+            var hauteur = $("#hauteur").val();
+            var name = prompt("Nom du pattern !");
+            $(".square").each(function(index) {
+                ligne = Math.floor(compte / largeur);
+                colonne = compte - (ligne * largeur);
+
+
+
+                if ($(this).hasClass("dead")) {
+                    array[ligne][colonne] = false;
+                } else {
+                    array[ligne][colonne] = true;
+                }
+
+
+                compte++;
+            });
+            var xml = '<TileMaps><level><map>';
+            xml += JSON.stringify(array);
+            xml += '</map></level></TileMaps>';
+            $("#xml").html(xml);
+            if (window.confirm('Vous allez sauver ce pattern !')) {
+                $.post('save.php', {
+                    'html': xml,
+                    'name': name
+                }, function(_dta) {
+                    window.alert(_dta);
+                });
+            }
+        }
+
+        function load() {
+
+            $.ajax({
+                type: "GET",
+                url: "xml/" + $("#listing").val(),
+                dataType: "xml",
+                success: function(xml) {
+                    var map = $.parseJSON($(xml).find("map").text())
+
+                    console.log(map[0].length);
+                    var largeurcontent = $("#content").width();
+
+                    var largeur = map[0].length;
+                    var hauteur = map.length;
+                    $("#largeur").val(largeur);
+                    $("#hauteur").val(hauteur);
+                    $("#content").empty();
+                    for (i = 0; i < hauteur; i++) {
+                        current[i] = [];
+                        for (j = 0; j < largeur; j++) {
+
+                            if (map[i][j] == true) {
+                                $("#content").append("<div class='square alive'></div>");
+                                current[i][j] = true;
+                            } else {
+                                $("#content").append("<div class='square dead'></div>");
+                                current[i][j] = false;
+                            }
+
+                        }
+
+                    }
+                    // alert("width : " + largeurcontent + "/largeur : " + largeur);
+                    $(".square").css({
+                        'width': (largeurcontent / largeur),
+                        'height': largeurcontent / largeur
+                    })
+                    $("#content").css("width", largeurcontent)
+                    console.log(current)
+                }
+            });
+        }
+
+        function reset() {
+            clearInterval(interval);
+            state = "stop";
+            test = true;
+            generation = 0;
+            $('#generation').html(generation);
+            var largeurcontent = $("#content").width();
+            var largeur = $("#largeur").val();
+            var hauteur = $("#hauteur").val();
+            $("#content").empty();
+            for (i = 0; i < hauteur; i++) {
+                current[i] = [];
+                for (j = 0; j < largeur; j++) {
+                    $("#content").append("<div class='square dead'></div>");
+                    current[i][j] = false;
+                }
+
+            }
+            // alert("width : " + largeurcontent + "/largeur : " + largeur);
+            $(".square").css({
+                'width': (largeurcontent / largeur),
+                'height': largeurcontent / largeur
+            })
+            $("#content").css("width", largeurcontent)
+            console.log(current)
+        }
+
+        function playing() {
+            if (state == "stop") {
+                state = "play";
+
+                var largeur = $("#largeur").val();
+                var hauteur = $("#hauteur").val();
+                var compte = 0;
+                var ligne;
+                var colonne;
+                if (test) {
+                    $(".square").each(function(index) {
+                        ligne = Math.floor(compte / largeur);
+                        colonne = compte - (ligne * largeur);
+
+
+
+                        if ($(this).hasClass("dead")) {
+                            current[ligne][colonne] = false;
+                        } else {
+                            current[ligne][colonne] = true;
+                        }
+
+
+                        compte++;
+                    });
+                    test = false;
+
+                }
+
+                compte = 0;
+                console.log(current);
+                var inter = current;
+                interval = setInterval(function() {
+                    generation++;
+                    $('#generation').html(generation);
+                    var save = current;
+                    $(".square").each(function(index) {
+
+                        ligne = Math.floor(compte / largeur);
+                        colonne = compte - (ligne * largeur);
+                        compteVivante = 0;
+                        //alert("ligne : " + ligne + " /hauteur" + hauteur)
+                        if (ligne > 0) {
+                            if (colonne > 0) {
+                                if (current[ligne - 1][colonne - 1] == true) {
+                                    compteVivante++;
+                                }
+                            }
+
+                            if (current[ligne - 1][colonne] == true) {
+                                compteVivante++;
+
+
+                            }
+                            if (colonne < largeur - 1) {
+                                if (current[ligne - 1][colonne + 1] == true) {
+                                    compteVivante++;
+
+                                }
+                            }
+
+                        }
+
+                        if (colonne > 0) {
+                            if (current[ligne][colonne - 1] === true) {
+                                compteVivante++;
+                                // alert('pas bon')
+
+                            }
+                        }
+                        if (colonne < largeur - 1) {
+                            if (current[ligne][colonne + 1] == true) {
+                                compteVivante++;
+                            }
+                        }
+                        if (ligne < hauteur - 1) {
+                            if (colonne > 0) {
+                                if (current[ligne + 1][colonne - 1] == true) {
+                                    compteVivante++;
+                                    // alert('-1')
+                                }
+                            }
+                            if (current[ligne + 1][colonne] == true) {
+                                // alert('0')
+                                compteVivante++;
+                            }
+                            if (colonne < largeur - 1) {
+                                if (current[ligne + 1][colonne + 1] == true) {
+                                    // alert('+1')
+                                    compteVivante++;
+                                }
+                            }
+                        }
+                        // alert("comptevivante : " + compteVivante + "/ligne:" + ligne + "/colonne:" + colonne + "/array : " + current[ligne][colonne - 1])
+                        // alert("testavant : " + current[ligne][colonne]) //si elle est morte
+
+                        if (current[ligne][colonne] == false) {
+                            if (compteVivante == 3) {
+                                //inter[ligne][colonne] = true;
+                                $(this).addClass("alive");
+                                $(this).removeClass("dead");
+
+                            } else {
+                                //inter[ligne][colonne] = false;
+                                $(this).addClass("dead");
+                                $(this).removeClass("alive");
+
+                            }
+                        } else { //si elle vit
+                            if (compteVivante == 3 || compteVivante == 2) {
+                                // inter[ligne][colonne] = true;
+                                $(this).addClass("alive");
+                                $(this).removeClass("dead");
+
+                            } else {
+                                //inter[ligne][colonne] = false;
+                                $(this).addClass("dead");
+                                $(this).removeClass("alive");
+
+                            }
+                        }
+                        current = [];
+                        current = save;
+                        // alert("testaapres : " + save[ligne][colonne]) //si elle est morte
+
+                        compte++;
+                    });
+                    compte = 0;
+                    $(".square").each(function(index) {
+                        ligne = Math.floor(compte / largeur);
+                        colonne = compte - (ligne * largeur);
+
+
+
+                        if ($(this).hasClass("dead")) {
+                            current[ligne][colonne] = false;
+                        } else {
+                            current[ligne][colonne] = true;
+                        }
+
+
+                        compte++;
+                    });
+                    compte = 0;
+                    console.log(current)
+                    console.log(inter);
+                }, vitesse);
+            }
+        }
+    </script>
+</body>
+
+</html>

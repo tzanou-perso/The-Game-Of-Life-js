@@ -40,15 +40,15 @@
 </head>
 
 <body>
-    <h1>Le jeu de la vie by Raphael</h1>
-    <p>La taille maximale est de 100 cellules</p>
+    <h1>The game of life by Tzanou</h1>
+    <p>The maximal size recommended is 100</p>
     <div id="size">
-        <label>largeur : 
+        <label>Width : 
         <input type="number" maxlength="100" value="100" id="largeur"/></label><br>
-        <label>hauteur : 
+        <label>Height : 
             <input type="number" maxlength="100" value="100" id="hauteur"/></label><br>
 
-        <label>vitesse : 
+        <label>Speed : 
                 <input type="number" value="10" id="vitesse"/></label><br>
 
         <div id="controls">
@@ -62,7 +62,7 @@
 
 
             <select id="listing">
-              <option>Charger une sauvegarde </option>
+              <option>Load a preset </option>
 
             </select>
         </div>
@@ -88,10 +88,6 @@
                     console.log(data);
 
                     //List all xml file names in the page
-
-                    //var filename = this.href.replace(window.location, "").replace("http:///", "");
-                    //$("#listing").append( '<li>'+filename+'</li>');
-
                     $(data).find("a:contains(" + fileExt + ")").each(function() {
                         $("#listing").append('<option value="' + $(this).text() + '">' + $(this).text() + '</option>');
                     });
@@ -102,15 +98,18 @@
         });
 
 
-
+        //the state of the game
         var state = "stop";
         var isPlay = false;
         var test = true;
         var interval;
+        // the speed of the game
         var vitesse = 10;
         var current = [];
         var generation = 0;
         var largeurcont = $("#content").width();
+        
+        // This generating the grid at the loading page
         for (i = 0; i < 100; i++) {
             current[i] = [];
             for (j = 0; j < 100; j++) {
@@ -119,7 +118,8 @@
             }
 
         }
-        // alert("width : " + largeurcontent + "/largeur : " + largeur);
+        
+        // Set the size of each square depanding of the grid size
         $(".square").css({
             'width': (largeurcont / 100),
             'height': largeurcont / 100
@@ -130,6 +130,9 @@
             reset();
 
         });
+        
+        // On click on a square select it and add it the alive class 
+        // for black background
         $("body").on("click", ".square", function() {
             if ($(this).hasClass("dead")) {
                 $(this).addClass("alive");
@@ -140,29 +143,39 @@
             }
 
         });
+        
+        // Stop the game
         $("#stop").click(function() {
             stop();
         });
+        
+        // Play the game
         $("#play").click(function() {
             playing();
         });
 
+        // Reset the game
         $("#reset").click(function() {
             reset();
         });
 
+        // Save the pattern in xml file
         $("#save").click(function() {
             xml(current);
         });
 
+        
+        // Load the selected pattern
         $("#listing").click(function() {
             load();
         });
 
+        //Change speed of the game 
         $("#vitesse").change(function() {
             vitesse = $("#vitesse").val();
         });
 
+        // Stop the game
         function stop() {
             if (state == "play") {
                 clearInterval(interval);
@@ -173,6 +186,7 @@
 
         }
 
+        // This function save the current pattern in a xml file
         function xml(array) {
             var compte = 0;
             var ligne;
@@ -183,9 +197,7 @@
             $(".square").each(function(index) {
                 ligne = Math.floor(compte / largeur);
                 colonne = compte - (ligne * largeur);
-
-
-
+                
                 if ($(this).hasClass("dead")) {
                     array[ligne][colonne] = false;
                 } else {
@@ -209,6 +221,7 @@
             }
         }
 
+        // This function load a selected pattern
         function load() {
 
             $.ajax({

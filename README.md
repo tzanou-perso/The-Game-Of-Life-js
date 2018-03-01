@@ -4,7 +4,7 @@ The game of life in html and javascript (jquery)
 
 its a simple game of life in html css and jquery !
 
-Démo : http://gameoflifejs.tzanou-pro.fr/
+Démo : http://tzanou-dev.fr/jeudelavie/
 
 The features for now is :
 
